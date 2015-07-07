@@ -48,8 +48,8 @@ gen.smpl.id <- generateCVRuns(labels = train$SHORT,
                            ntimes = 1,
                            nfold = 5,
                            stratified=TRUE)
-
-subset.list<-list()
+onefold.list<-list()
+fourfold.list<-list()
 
 
 for (i in 1:5)
@@ -61,7 +61,30 @@ for (i in 1:5)
   names(predictedSum)[c(1,4)] <- c('NUM', 'FITTED')
   predictedSum<-cbind(predictedSum, predictedSum$CLAIMS/predictedSum$FITTED)
   names(predictedSum)[5]<-'RATIO'
-  predictedSum
-  subset.list[[i]]<-predictedSum
+  onefold.list[[i]]<-predictedSum
+  
+  x<-train[as.vector(c(unlist(gen.smpl.id[[1]][(i%%5)+1]),
+                       unlist(gen.smpl.id[[1]][((i+1)%%5)+1]),
+                       unlist(gen.smpl.id[[1]][((i+2)%%5)+1]),
+                       unlist(gen.smpl.id[[1]][((i+3)%%5)+1]))),] 
+  num<- aggregate(x[,14]~SHORT,x,length)
+  predictedSum<-aggregate(x[,14]~SHORT,x,sum)
+  predictedSum<-cbind(num[,2],aggregate(CLAIMS~SHORT,x,sum), predictedSum[,2])
+  names(predictedSum)[c(1,4)] <- c('NUM', 'FITTED')
+  predictedSum<-cbind(predictedSum, predictedSum$CLAIMS/predictedSum$FITTED)
+  names(predictedSum)[5]<-'RATIO'
+  fourfold.list[[i]]<-predictedSum
   }
 
+num<- aggregate(test[,14]~SHORT,test,length)
+predictedSum<-aggregate(test[,14]~SHORT,test,sum)
+predictedSum<-cbind(num[,2],aggregate(CLAIMS~SHORT,test,sum), predictedSum[,2])
+names(predictedSum)[c(1,4)] <- c('NUM', 'FITTED')
+predictedSum<-cbind(predictedSum, predictedSum$CLAIMS/predictedSum$FITTED)
+names(predictedSum)[5]<-'RATIO'
+test.aggr<-predictedSum
+  
+
+save(fourfold.list, file="fourfold.Rdata")
+save(onefold.list, file="onefold.Rdata")
+save(test.aggr, file="testSample.Rdata")
