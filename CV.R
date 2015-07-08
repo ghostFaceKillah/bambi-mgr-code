@@ -27,18 +27,18 @@ CrossValid<-function(x,LG,z,model){
       h<-6
       if (model==0)
       { 
-        tps<-Tps(y, x[[i]]$RATIO, lambda=lambda, lon.lat=TRUE)
-        fit<-fitted(tps)
+          tps<-Tps(y, x[[i]]$RATIO, lambda=lambda, lon.lat=TRUE)
+          fit<-fitted(tps)
       }
       else
       {
-        for (k in 1:7){
-          h<-h+1
-          print(h)
-          fit<-smooth_whittaker(LG,h,lambda) 
-        }
+          for (k in 1:7)
+          {
+              h<-h+1
+              print(h)
+              fit<-smooth_whittaker(LG,h,lambda) 
+          }
       }
- 
       error<-sum((fit-z[[i]]$RATIO)^2)
       diagnostic[[i]][j,]<-c(lambda,error,h)
     }
