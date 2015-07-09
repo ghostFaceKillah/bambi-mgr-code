@@ -1,6 +1,6 @@
 
 #for tps set model =  0 
-CrossValid<-function(x,LG,z,model)
+CrossValid<-function(x,LG,z,model,lambdaStep)
 {
   
     iterNum<-100
@@ -21,7 +21,7 @@ CrossValid<-function(x,LG,z,model)
   
     for (i in 1:length(x))
     {
-        lambda<--0
+        lambda<-0
         
         for (j in 1:iterNum)
         {
@@ -44,6 +44,8 @@ CrossValid<-function(x,LG,z,model)
                     h<-h+1
                 }
             }
+            
+            lambda<-lambda+lambdaStep
         }
         
         minlambda<-diagnostic[[i]][which.min(diagnostic[[i]][,2]),1]
@@ -61,10 +63,9 @@ CrossValid<-function(x,LG,z,model)
         }    
     
         CVSmoothed[[i]]<-fit 
-        lambda<-lambda+0.001
     }
   
     return(c(CVSmoothed,diagnostic))
 }
 
-CV<-CrossValid(fourfold.list,LGroup,onefold.list,1)
+CV<-CrossValid(fourfold.list,LGroup,onefold.list,1,10)
