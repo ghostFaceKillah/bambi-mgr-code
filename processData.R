@@ -8,6 +8,7 @@ library(FNN)
 library(caret)
 library(maptools)
 library(TunePareto)
+library(plyr)
 
 setwd("/Users/misiu-dev/Desktop/one to rule them all/klaudi/magister krol")
 
@@ -20,8 +21,8 @@ summary(cbind(CLAIMS, CLAIMS_VALUE))
 SEX<-factor(SEX)
 #ENGINE_CAPACITY<-as.numeric(levels(ENGINE_CAPACITY))
 MAKE<-factor(MAKE)
-gp6<-glm(CLAIMS~AGE+MAKE,poisson,offset=log(2*EXP))
-dane<-cbind(dane,fitted(gp6))
+zi6<-glm(CLAIMS~AGE+MAKE+SEX |1,poisson,offset=log(EXP))
+dane<-cbind(dane,fitted(zi6))
 names(dane)[c(12,13,14)]<-c('SHORT','VSHORT','FITTED')
 
 dane$SHORT<-revalue(dane$SHORT,c(
@@ -35,46 +36,62 @@ dane<-dane[-(which(dane$SHORT=="50-9" | dane$SHORT=="60-9")),]
 
 set.seed(111)
 smpl.id <- generateCVRuns(labels = dane$SHORT,
-                           ntimes = 1,
-                           nfold = 10,
-                           stratified=TRUE)
-
-unl.smpl.id<-as.vector(unlist(smpl.id[[1]][1]))
-test<-dane[unl.smpl.id,]
-train<-dane[-unl.smpl.id,]
-
-set.seed(111)
-gen.smpl.id <- generateCVRuns(labels = train$SHORT,
-                           ntimes = 1,
+                           ntimes = 10,
                            nfold = 5,
                            stratified=TRUE)
+
+#unl.smpl.id<-as.vector(unlist(smpl.id[[1]][1]))
+#test<-dane[unl.smpl.id,]
+#train<-dane[-unl.smpl.id,]
+#train<-dane[smpl.id]
+  
+#set.seed(111)
+#gen.smpl.id <- generateCVRuns(labels = train$SHORT,
+#                           ntimes = 1,
+#                           nfold = 3,
+#                           stratified=TRUE)
+
 onefold.list<-list()
 fourfold.list<-list()
 
-
+for(j in 1:10){
+  
 for (i in 1:5)
   {
-  x<-train[as.vector(unlist(gen.smpl.id[[1]][i])),] 
+  x<-dane[as.vector(unlist(smpl.id[[j]][i])),] 
   num<- aggregate(x[,14]~SHORT,x,length)
   predictedSum<-aggregate(x[,14]~SHORT,x,sum)
   predictedSum<-cbind(num[,2],aggregate(CLAIMS~SHORT,x,sum), predictedSum[,2])
   names(predictedSum)[c(1,4)] <- c('NUM', 'FITTED')
   predictedSum<-cbind(predictedSum, predictedSum$CLAIMS/predictedSum$FITTED)
   names(predictedSum)[5]<-'RATIO'
-  onefold.list[[i]]<-predictedSum
+  R<-predictedSum[,5]
+  index <- R < 1
+  R[index]<--1/R[index]
+  R[R>0]<-R[R>0]-1
+  R[R<0]<-R[R<0]+1
+  predictedSum[,5]<-R
+  onefold.list[[(i*10+j)-10]]<-predictedSum
   
-  x<-train[as.vector(c(unlist(gen.smpl.id[[1]][(i%%5)+1]),
-                       unlist(gen.smpl.id[[1]][((i+1)%%5)+1]),
-                       unlist(gen.smpl.id[[1]][((i+2)%%5)+1]),
-                       unlist(gen.smpl.id[[1]][((i+3)%%5)+1]))),] 
+  x<-dane[as.vector(c(unlist(smpl.id[[j]][(i%%5)+1]),
+                       unlist(smpl.id[[j]][((i+1)%%5)+1]),
+                       unlist(smpl.id[[j]][((i+2)%%5)+1]),
+                       unlist(smpl.id[[j]][((i+3)%%5)+1]))),] 
   num<- aggregate(x[,14]~SHORT,x,length)
   predictedSum<-aggregate(x[,14]~SHORT,x,sum)
   predictedSum<-cbind(num[,2],aggregate(CLAIMS~SHORT,x,sum), predictedSum[,2])
   names(predictedSum)[c(1,4)] <- c('NUM', 'FITTED')
   predictedSum<-cbind(predictedSum, predictedSum$CLAIMS/predictedSum$FITTED)
   names(predictedSum)[5]<-'RATIO'
-  fourfold.list[[i]]<-predictedSum
+  R<-predictedSum[,5]
+  index <- R < 1
+  R[index]<--1/R[index]
+  R[R>0]<-R[R>0]-1
+  R[R<0]<-R[R<0]+1
+  predictedSum[,5]<-R
+  fourfold.list[[(i*10+j)-10]]<-predictedSum
   }
+}
 
 num<- aggregate(test[,14]~SHORT,test,length)
 predictedSum<-aggregate(test[,14]~SHORT,test,sum)
@@ -82,6 +99,13 @@ predictedSum<-cbind(num[,2],aggregate(CLAIMS~SHORT,test,sum), predictedSum[,2])
 names(predictedSum)[c(1,4)] <- c('NUM', 'FITTED')
 predictedSum<-cbind(predictedSum, predictedSum$CLAIMS/predictedSum$FITTED)
 names(predictedSum)[5]<-'RATIO'
+R<-predictedSum[,5]
+index <- R < 1
+R[index]<--1/R[index]
+R# selection of 2 clusters 
+R[R>0]<-R[R>0]-1
+R[R<0]<-R[R<0]+1
+predictedSum[,5]<-R
 test.aggr<-predictedSum
   
 
